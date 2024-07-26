@@ -1,7 +1,9 @@
-﻿using EmailService_Core.Abstractions;
+﻿using EmailService.Core.CustomExceptions;
+using EmailService_Core.Abstractions;
 using EmailService_Core.Models;
 using MailKit.Net.Smtp;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using MimeKit;
 
 namespace EmailService_Core.Infrastructure
@@ -9,10 +11,12 @@ namespace EmailService_Core.Infrastructure
     public class EmailDispatcher : IEmailDispatcher
     {
         private readonly EmailConfiguration _emailConfig;
+        private readonly ILogger<EmailDispatcher> _logger;
 
-        public EmailDispatcher(EmailConfiguration emailConfig)
+        public EmailDispatcher(EmailConfiguration emailConfig, ILogger<EmailDispatcher> logger)
         {
             _emailConfig = emailConfig;
+            _logger = logger;
         }
 
         public void SendEmail(Message message)
@@ -56,8 +60,7 @@ namespace EmailService_Core.Infrastructure
                 }
                 catch
                 {
-                    //log an error message or throw an exception or both.
-                    throw;
+                    throw new NotConnectionException();
                 }
                 finally
                 {

@@ -2,6 +2,8 @@ using EmailService_Core.Abstractions;
 using EmailService_Core.Infrastructure;
 using EmailService_Core.Models;
 using EmailService.Core.Services;
+using Serilog;
+using Serilog.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -16,6 +18,13 @@ EmailConfiguration? emailConfig = configuration
     .GetSection("EmailConfiguration")
     .Get<EmailConfiguration>();
 
+Logger logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(configuration)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+builder.Services.AddSingleton(logger);
 builder.Services.AddSingleton(emailConfig!);
 builder.Services.AddScoped<IEmailDispatcher, EmailDispatcher>();
 builder.Services.AddScoped<IMailService, MailService>();
