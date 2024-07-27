@@ -58,9 +58,9 @@ namespace EmailService_Core.Infrastructure
 
                     client.Send(mailMessage);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    throw new NotConnectionException();
+                    throw new ConnectionException("Не удалось подключиться, либо отправить сообщение", ex);
                 }
                 finally
                 {
@@ -82,10 +82,9 @@ namespace EmailService_Core.Infrastructure
 
                     await client.SendAsync(mailMessage);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    //log an error message or throw an exception or both.
-                    throw;
+                    throw new ConnectionException("Не удалось подключиться, либо отправить сообщение", ex);
                 }
                 finally
                 {
@@ -123,6 +122,6 @@ namespace EmailService_Core.Infrastructure
             emailMessage.Body = new TextPart(MimeKit.Text.TextFormat.Text) { Text = message.Content };
             return emailMessage;
         }
-        #endregion
     }
+        #endregion
 }

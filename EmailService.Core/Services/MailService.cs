@@ -2,6 +2,8 @@
 using EmailService_Core.Abstractions;
 using EmailService_Core.Models;
 using Microsoft.AspNetCore.Http;
+using System.Net.Mail;
+using System.Text;
 
 namespace EmailService.Core.Services
 {
@@ -45,21 +47,51 @@ namespace EmailService.Core.Services
 
         private static Message MessageChecker(SendMessageDto model)
         {
+
             Message message;
-            if (model.Subject != null)
+
+            if (model != null)
             {
-                if (model.Content == null)
+                List<string> inValidEmails = [];
+                foreach (string email in model.To)
                 {
-                    model.Content = String.Empty;
+                    if (!MailAddress.TryCreate(email, out var mailAddress))
+                        inValidEmails.Add(email);
                 }
-                message = new(model.To, model.Subject, model.Content);
+                if (inValidEmails.Any())
+                {
+                    StringBuilder exceptionBuilder = new StringBuilder();
+                    foreach (var item in inValidEmails)
+                    {
+                        exceptionBuilder.AppendLine(item);
+                    }
+                    // TODO send true exceptions (нужно чтобы каждый неправильный email был на новой строке)
+                    throw new FormatException($"Письмо не отправлено! Следующие email неверны: {exceptionBuilder}");
+                }
+                message = new(model.To, model.Subject ?? "", model.Content ?? "");
             }
             else
             {
-                throw new Exception("Не указана тема письма");
+                throw new FormatException("Нельзя отправить письмо, которое не содержит ни получателя, ни темы, ни содержания!");
             }
 
             return message;
+
+            //Message message;
+            //if (model.Subject != null)
+            //{
+            //    if (model.Content == null)
+            //    {
+            //        model.Content = String.Empty;
+            //    }
+            //    message = new(model.To, model.Subject, model.Content);
+            //}
+            //else
+            //{
+            //    throw new Exception("Не указана тема письма");
+            //}
+
+            //return message;
         }
     }
 }

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>EmailService.API</name>
+    </assembly>
+    <members>
+        <member name="M:EmailService.API.Controllers.MailController.SendEmailAsync(EmailService.Core.Models.SendMessageDto,System.Threading.CancellationToken)">
+            <summary>
+            Отправка сообщений
+            </summary>
+            <param name="model"></param>
+            <param name="cancellationToken"></param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

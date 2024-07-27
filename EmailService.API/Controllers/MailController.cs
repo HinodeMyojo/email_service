@@ -2,6 +2,7 @@
 using EmailService_Core.Abstractions;
 using EmailService_Core.Models;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace EmailService.API.Controllers
 {
@@ -16,7 +17,15 @@ namespace EmailService.API.Controllers
             _emailService = emailService;
         }
 
+        /// <summary>
+        /// Отправка сообщений
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [HttpGet("send")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> SendEmailAsync(
             [FromQuery] SendMessageDto model, CancellationToken cancellationToken)
         {
@@ -24,6 +33,13 @@ namespace EmailService.API.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Отправка сообщений с вложенными файлами
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="model"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [HttpPost("send/files")]
         public async Task<IActionResult> SendEmailWithFiles(
             IFormFileCollection file, [FromForm] SendMessageDto model,CancellationToken cancellationToken)
@@ -31,5 +47,8 @@ namespace EmailService.API.Controllers
             await _emailService.SendEmailWithFilesAsync(file, model, cancellationToken);
             return Ok();
         }
+        
+        //TODO Добавить возможность отложенной отправки сообщений
+        //TODO Добавить возможность ...
     }
 }

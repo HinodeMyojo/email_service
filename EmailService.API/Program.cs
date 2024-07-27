@@ -4,16 +4,34 @@ using EmailService_Core.Models;
 using EmailService.Core.Services;
 using Serilog;
 using Serilog.Core;
+using EmailService.API.Middlewares;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 // Add services to the container.
+//Добавляем хендлер ошибок
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(opt =>
+{
+    opt.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Version = "v1",
+        Title = "EmailService API",
+        Description = "Сервис для рассылки email-писем"
+    });
+
+    var basePath = AppContext.BaseDirectory;
+
+    var xmlPath = Path.Combine(basePath, "EmailService.xml");
+    opt.IncludeXmlComments(xmlPath);
+});
+
 EmailConfiguration? emailConfig = configuration
     .GetSection("EmailConfiguration")
     .Get<EmailConfiguration>();
@@ -30,6 +48,8 @@ builder.Services.AddScoped<IEmailDispatcher, EmailDispatcher>();
 builder.Services.AddScoped<IMailService, MailService>();
 
 var app = builder.Build();
+
+app.UseExceptionHandler(o => { });
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
