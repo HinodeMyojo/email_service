@@ -4,10 +4,24 @@
         <name>EmailService.API</name>
     </assembly>
     <members>
+        <member name="T:EmailService.API.BackgroundServices.RabbitMQBackgroundService">
+            <summary>
+            BackgroundService - Consumer
+            </summary>
+        </member>
         <member name="M:EmailService.API.Controllers.MailController.SendEmailAsync(EmailService.Core.Models.SendMessageDto,System.Threading.CancellationToken)">
             <summary>
             Отправка сообщений
             </summary>
+            <param name="model"></param>
+            <param name="cancellationToken"></param>
+            <returns></returns>
+        </member>
+        <member name="M:EmailService.API.Controllers.MailController.SendEmailWithFiles(Microsoft.AspNetCore.Http.IFormFileCollection,EmailService.Core.Models.SendMessageDto,System.Threading.CancellationToken)">
+            <summary>
+            Отправка сообщений с вложенными файлами
+            </summary>
+            <param name="file"></param>
             <param name="model"></param>
             <param name="cancellationToken"></param>
             <returns></returns>

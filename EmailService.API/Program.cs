@@ -6,6 +6,7 @@ using Serilog;
 using Serilog.Core;
 using EmailService.API.Middlewares;
 using Microsoft.OpenApi.Models;
+using EmailService.API.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -46,6 +47,8 @@ builder.Services.AddSingleton(logger);
 builder.Services.AddSingleton(emailConfig!);
 builder.Services.AddScoped<IEmailDispatcher, EmailDispatcher>();
 builder.Services.AddScoped<IMailService, MailService>();
+
+builder.Services.AddHostedService<RabbitMQBackgroundService>();
 
 var app = builder.Build();
 
