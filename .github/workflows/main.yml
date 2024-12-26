@@ -1,0 +1,47 @@
+name: email-service
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Добавление SSH key
+        env:
+            SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+            mkdir -p /home/runner/.ssh
+            ssh-keyscan ${{ secrets.SSH_HOST }} >> /home/runner/.ssh/known_hosts
+            echo "${{ secrets.SSH_KEY }}" > /home/runner/.ssh/github_actions
+            chmod 600 /home/runner/.ssh/github_actions
+            ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+            ssh-add /home/runner/.ssh/github_actions
+
+      - name: Клонирование репозитория на удаленный сервак
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            rm -rf /var/www/pleiades-server/email_service/*
+            cd /var/www/pleiades-server
+            git clone https://github.com/HinodeMyojo/email_service.git
+            
+      - name: Деплой сервера
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/www/pleiades-server/email_service
+            docker-compose -f docker-compose-prod.yml up -d --build
+

@@ -24,7 +24,7 @@ namespace EmailService.API.BackgroundServices
             )
         {
             // Настройка подключения к RabbitMQ
-            var factory = new ConnectionFactory() { HostName = "host.docker.internal", Port = 5672, UserName = "admin", Password = "admin" };
+            var factory = new ConnectionFactory() { HostName = "rabbitmq", Port = 5672, UserName = "admin", Password = "admin" };
             _connection = factory.CreateConnection();
             _channel = _connection.CreateModel();
 

@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  emailservice:
+    networks:
+          - cards-network
+    build:
+      context: .
+      dockerfile: EmailService.API/Dockerfile
+networks:
+  cards-network:
+    external: true

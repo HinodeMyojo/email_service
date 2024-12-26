@@ -12,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 // Add services to the container.
-//Добавляем хендлер ошибок
+//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddControllers();
@@ -24,7 +24,7 @@ builder.Services.AddSwaggerGen(opt =>
     {
         Version = "v1",
         Title = "EmailService API",
-        Description = "Сервис для рассылки email-писем"
+        Description = "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ email-пїЅпїЅпїЅпїЅпїЅ"
     });
 
     var basePath = AppContext.BaseDirectory;
@@ -61,7 +61,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
