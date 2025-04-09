@@ -1,8 +1,12 @@
-version: '3.4'
-
 services:
   emailservice.api:
+    container_name: email
     image: ${DOCKER_REGISTRY-}emailserviceapi
     build:
       context: .
       dockerfile: EmailService.API/Dockerfile
+    networks:
+      - cards-network
+networks:
+  cards-network:
+    external: true

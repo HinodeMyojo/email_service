@@ -1,7 +1,4 @@
-﻿using EmailService.Core.Models;
-using EmailService_Core.Abstractions;
-using Microsoft.AspNetCore.Connections;
-using Newtonsoft.Json;
+﻿using EmailService.Core.Infrastructure;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
@@ -9,96 +6,104 @@ using System.Text;
 namespace EmailService.API.BackgroundServices
 {
     /// <summary>
-    /// BackgroundService - Consumer
+    /// 
     /// </summary>
     public class RabbitMQBackgroundService : BackgroundService
     {
-        private IConnection _connection;
-        private IModel _channel;
-        //private readonly IMailService _mailService;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly RabbitMQConnection _connection;
 
-        public RabbitMQBackgroundService(
-            //IMailService mailService, 
-            IServiceProvider serviceProvider
-            )
+        public RabbitMQBackgroundService(RabbitMQConnection connection)
         {
-            // Настройка подключения к RabbitMQ
-            var factory = new ConnectionFactory() { HostName = "rabbitmq", Port = 5672, UserName = "admin", Password = "admin" };
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
-
-            var exchangeName = "emailExchange";
-            _channel.ExchangeDeclare(exchangeName, type: ExchangeType.Topic, durable: true);
-
-            // Декларация очереди (если её нет)
-            _channel.QueueDeclare(queue: "emailQueue",
-                                 durable: false,
-                                 exclusive: false,
-                                 autoDelete: false,
-                                 arguments: null);
-
-            _channel.QueueBind(queue: "emailQueue", exchange: exchangeName, routingKey: "email.send");
-            _channel.QueueBind(queue: "emailQueue", exchange: exchangeName, routingKey: "email.send.files");
-
-            //_mailService = mailService;
-            _serviceProvider = serviceProvider;
+            _connection = connection;
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var consumer = new EventingBasicConsumer(_channel);
+            IConnection connection = null;
+            IChannel channel = null;
+            string consumerTag = null;
 
-            // Обработка сообщения
-            consumer.Received += async (model, ea) =>
+            try
             {
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
-                var routingKey = ea.RoutingKey;
-
-
-                using(var scope = _serviceProvider.CreateScope()) 
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    IMailService _mailService = scope
-                    .ServiceProvider.GetRequiredService<IMailService>();
-
-                    if (routingKey == "email.send")
+                    try
                     {
-                        SendMessageDto? emailModel = JsonConvert
-                        .DeserializeObject<SendMessageDto>(message) ??
-                            throw new ArgumentNullException(nameof(emailModel), "Контент сообщения оказался пустым");
-                        // Логика отправки email без файлов
-                        await _mailService.SendEmailAsync(emailModel, default);
-                        Console.WriteLine("Ъуй");
+                        connection = await _connection.GetConnectionAsync(stoppingToken);
+                        channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
+
+                        const string exchangeName = "mailExchange";
+                        const string queueName = "mailQueue";
+                        const string routingKey = "mail.send";
+
+                        var queueArgs = new Dictionary<string, object?>
+                {
+                    { "x-queue-type", "stream" }
+                };
+
+                        await channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Direct, durable: true, cancellationToken: stoppingToken);
+                        await channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, arguments: queueArgs, cancellationToken: stoppingToken);
+                        await channel.QueueBindAsync(queueName, exchangeName, routingKey, cancellationToken: stoppingToken);
+
+                        var consumer = new AsyncEventingBasicConsumer(channel);
+                        consumer.ReceivedAsync += async (ch, ea) =>
+                        {
+                            try
+                            {
+                                var body = ea.Body.ToArray();
+                                var message = Encoding.UTF8.GetString(body);
+
+                                // Обрабатываем сообщения тут
+
+                                await channel.BasicAckAsync(ea.DeliveryTag, false);
+                            }
+                            catch
+                            {
+                                await channel.BasicNackAsync(ea.DeliveryTag, false, true);
+                            }
+                        };
+
+                        consumerTag = await channel.BasicConsumeAsync(queueName, false, consumer);
+
+                        var connectionShutdownTcs = new TaskCompletionSource();
+                        var cancellationRegistration = stoppingToken.Register(() => connectionShutdownTcs.TrySetResult());
+
+                        connection.ConnectionShutdownAsync += (sender, args) =>
+                        {
+                            connectionShutdownTcs.TrySetResult();
+                            return Task.CompletedTask;
+                        };
+
+                        await connectionShutdownTcs.Task;
+                        cancellationRegistration.Dispose();
                     }
-
-                    else if (routingKey == "email.send.files")
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                     {
-                        SendMailWithFilesDto? emailData = JsonConvert
-                        .DeserializeObject<SendMailWithFilesDto>(message) ??
-                            throw new ArgumentNullException(nameof(emailData), "Контент сообщения с файлами оказался пустым");
-                        // Логика отправки email с файлами
-                        // TODO отправка файлов
-                        //await _mailService.SendEmailWithFilesAsync(emailData.Files, emailData.Message, default);
-                        Console.WriteLine("!!");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"RabbitMQ error: {ex.Message}");
+                        await Task.Delay(5000, stoppingToken);
+                    }
+                    finally
+                    {
+                        if (channel != null && consumerTag != null)
+                        {
+                            try { await channel.BasicCancelAsync(consumerTag); } catch { }
+                        }
+                        channel?.CloseAsync();
+                        channel?.Dispose();
+                        connection?.CloseAsync();
+                        connection?.Dispose();
                     }
                 }
-                
-            };
-
-            _channel.BasicConsume(queue: "emailQueue",
-                                 autoAck: true,
-                                 consumer: consumer);
-
-            return Task.CompletedTask;  // Фоновая задача завершена
-        }
-
-
-        public override void Dispose()
-        {
-            _channel.Close();
-            _connection.Close();
-            base.Dispose();
+            }
+            finally
+            {
+                channel?.Dispose();
+                connection?.Dispose();
+            }
         }
     }
 

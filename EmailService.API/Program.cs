@@ -7,6 +7,8 @@ using Serilog.Core;
 using EmailService.API.Middlewares;
 using Microsoft.OpenApi.Models;
 using EmailService.API.BackgroundServices;
+using EmailService.Core.Infrastructure;
+using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -48,7 +50,18 @@ builder.Services.AddSingleton(emailConfig!);
 builder.Services.AddScoped<IEmailDispatcher, EmailDispatcher>();
 builder.Services.AddScoped<IMailService, MailService>();
 
+// RabbitMQ
+builder.Services.AddSingleton<IConnectionFactory>(sp =>
+            new ConnectionFactory
+            {
+                HostName = "rabbitmq",
+                Port = 5672,
+                UserName = "admin",
+                Password = "admin"
+            });
+builder.Services.AddSingleton<RabbitMQConnection>();
 builder.Services.AddHostedService<RabbitMQBackgroundService>();
+//
 
 var app = builder.Build();
 
